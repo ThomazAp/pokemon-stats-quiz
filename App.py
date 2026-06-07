@@ -3,6 +3,7 @@ import requests
 import random
 import base64
 
+# Configuração da Página
 st.set_page_config(page_title="Quem é esse Pokémon?", page_icon="🎮", layout="centered")
 
 # --- DESIGN E CENTRALIZAÇÃO ---
@@ -26,35 +27,52 @@ def aplicar_layout_centrado(image_file):
                 text-align: center;
             }}
 
-            h1, h2, h3 {{
+            /* --- TITULOS PRINCIPAIS COM ALTO CONTRASTE --- */
+            h1 {{
                 color: #ffcb05 !important;
-                text-shadow: 2px 2px 0px #000 !important;
+                font-size: 52px !important;
+                text-shadow: 
+                    -2.5px -2.5px 0 #000,  
+                     2.5px -2.5px 0 #000,
+                    -2.5px  2.5px 0 #000,
+                     2.5px  2.5px 0 #000,
+                     5px  5px 0px #000 !important; 
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                letter-spacing: 1px;
+                letter-spacing: 2px;
                 text-align: center !important;
-                font-size: 32px !important;
+                margin-bottom: 35px !important;
             }}
 
-            /* --- FIX: VISUAL DO SELETOR DE DIFICULDADE --- */
-            /* Garante que o título do Radio Button fique visível e alinhado */
+            h2, h3 {{
+                color: #ffcb05 !important;
+                text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 2px 2px 0 #000 !important;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                text-align: center !important;
+            }}
+
+            /* --- TITULOS DOS RADIOS (DIFICULDADE E GERAÇÃO) --- */
             .stRadio > label {{
-                color: #1a2a7a !important;
-                font-size: 20px !important;
+                color: #ffcb05 !important;
+                font-size: 24px !important; 
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
                 font-weight: 900 !important;
-                text-shadow: 2px 2px 0px #fff !important;
+                text-shadow: 2px 2px 0px #000 !important;
+                letter-spacing: 1px !important;
+                margin-bottom: 10px !important;
             }}
             
-            /* Cria "cards" para as opções do seletor, resolvendo o problema do Modo Escuro */
+            /* Cards das Opções */
             div[role="radiogroup"] p {{
                 color: #1a2a7a !important;
                 font-weight: bold !important;
-                font-size: 16px !important;
+                font-size: 18px !important;
                 background-color: rgba(255, 255, 255, 0.9) !important;
-                padding: 5px 15px;
+                padding: 8px 18px;
                 border-radius: 8px;
                 border: 2px solid #ffcb05;
             }}
 
+            /* --- CARDS DE STATUS --- */
             [data-testid="stMetric"] {{
                 background-color: rgba(255, 255, 255, 0.95) !important;
                 border-radius: 12px !important;
@@ -73,7 +91,7 @@ def aplicar_layout_centrado(image_file):
                 text-shadow: 1.5px 1.5px 0px #000 !important;
                 font-family: 'Segoe UI', sans-serif;
                 font-weight: bold !important;
-                font-size: 18px !important;
+                font-size: 20px !important;
                 text-align: center !important;
                 width: 100% !important;
                 display: flex !important;
@@ -82,7 +100,7 @@ def aplicar_layout_centrado(image_file):
 
             [data-testid="stMetricValue"] {{
                 color: #1a2a7a !important;
-                font-size: 34px !important;
+                font-size: 36px !important;
                 font-weight: bold !important;
                 width: 100% !important;
                 display: flex !important;
@@ -90,18 +108,21 @@ def aplicar_layout_centrado(image_file):
                 text-align: center !important;
             }}
 
+            /* --- BOTÕES --- */
             .stButton>button {{
                 background-color: #1a2a7a !important; 
                 color: white !important;
                 border: 2px solid #ffcb05 !important;
-                border-radius: 8px !important;
-                font-weight: 600 !important;
+                border-radius: 10px !important;
+                font-weight: 700 !important;
+                font-size: 18px !important;
                 transition: 0.2s;
             }}
             
             .stButton>button:hover {{
                 background-color: #3b4cca !important;
                 border-color: #ffffff !important;
+                transform: scale(1.02);
             }}
             </style>
             """, unsafe_allow_html=True)
@@ -114,7 +135,8 @@ if 'pontos' not in st.session_state:
         'vidas': 3, 
         'game_over': False, 
         'jogo_iniciado': False, 
-        'dificuldade': 'Fácil'
+        'dificuldade': 'Fácil',
+        'geracao': '1ª Gen'
     })
 
 aplicar_layout_centrado('background.png')
@@ -128,17 +150,34 @@ def buscar_pokemon(id_p):
     except:
         return None
 
+def obter_limites_geracao(geracao_escolhida):
+    if "1ª" in geracao_escolhida: return 1, 151
+    elif "2ª" in geracao_escolhida: return 152, 251
+    elif "3ª" in geracao_escolhida: return 252, 386
+    else: return 1, 386
+
 # --- UI PRINCIPAL ---
 st.markdown('<div class="main-ui">', unsafe_allow_html=True)
-st.title("🕵️ QUEM É ESSE POKÉMON?")
+st.markdown("<h1>🕵️ QUEM É ESSE POKÉMON?</h1>", unsafe_allow_html=True)
 
-# 1. SELETOR DE DIFICULDADE
-dificuldade_selecionada = st.radio(
-    "Defina a Dificuldade:", 
-    ["Fácil", "Difícil"], 
-    horizontal=True, 
-    disabled=st.session_state.jogo_iniciado
-)
+# 1. SELETORES DE MENU
+col_menu1, col_menu2 = st.columns(2)
+
+with col_menu1:
+    dificuldade_selecionada = st.radio(
+        "Defina a Dificuldade:", 
+        ["Fácil", "Difícil"], 
+        horizontal=True, 
+        disabled=st.session_state.jogo_iniciado
+    )
+
+with col_menu2:
+    geracao_selecionada = st.radio(
+        "Escolha a Geração:", 
+        ["1ª Gen", "2ª Gen", "3ª Gen", "Todas"], 
+        horizontal=True, 
+        disabled=st.session_state.jogo_iniciado
+    )
 
 # 2. TELA DE INÍCIO
 if not st.session_state.jogo_iniciado:
@@ -146,6 +185,7 @@ if not st.session_state.jogo_iniciado:
     if st.button("COMEÇAR JOGO ▶️", use_container_width=True):
         st.session_state.jogo_iniciado = True
         st.session_state.dificuldade = dificuldade_selecionada
+        st.session_state.geracao = geracao_selecionada
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
@@ -153,18 +193,18 @@ if not st.session_state.jogo_iniciado:
 # 3. GERADOR DE ROUND
 if not st.session_state.game_over and 'pokemon' not in st.session_state:
     with st.spinner("Sorteando Pokémon..."):
-        p = buscar_pokemon(random.randint(1, 151))
+        min_id, max_id = obter_limites_geracao(st.session_state.geracao)
+        p = buscar_pokemon(random.randint(min_id, max_id))
         if p:
             opcoes = {p['nome']}
             while len(opcoes) < 4:
-                falso = buscar_pokemon(random.randint(1, 151))
-                if falso:
-                    opcoes.add(falso['nome'])
+                falso = buscar_pokemon(random.randint(min_id, max_id))
+                if falso: opcoes.add(falso['nome'])
             lista = list(opcoes)
             random.shuffle(lista)
             st.session_state.update({'pokemon': p, 'alternativas': lista, 'respondido': False})
 
-# 4. HUD COM BOTÃO DE MENU INCLUÍDO
+# 4. HUD COM BOTÃO DE MENU
 c1, c2, c3 = st.columns([2, 2, 1.5])
 c1.markdown(f"### Vidas: {'🔴' * st.session_state.vidas}")
 c2.markdown(f"### Pontos: **{st.session_state.pontos}**")
@@ -183,7 +223,6 @@ if st.session_state.game_over:
 else:
     if 'pokemon' in st.session_state:
         p = st.session_state.pokemon
-        
         st.write("---")
         s1, s2, s3 = st.columns(3)
         s1.metric("HP", p['hp'])
@@ -191,7 +230,6 @@ else:
         s3.metric("DEFESA", p['def'])
 
         st.write("") 
-        
         mostrar_imagem = True if (st.session_state.dificuldade == "Fácil") or st.session_state.respondido else False
 
         if mostrar_imagem:
